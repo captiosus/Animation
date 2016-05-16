@@ -75,17 +75,20 @@ basename = ""
   jdyrlandweaver
   ==================== """
 def first_pass( commands ):
+    global num_frames
+    global basename
+    vary = False
     for command in commands:
         if "vary" in command:
-            vary = true
+            vary = True
         if "frames" in command:
             num_frames = command[1]
         if "basename" in command:
             basename = command[1]
     if vary:
-        if frames == 1:
+        if num_frames == 1:
             return
-    if frames != 1:
+    if num_frames != 1:
         if basename == "":
             basename = "default"
             print "Basename defaulted to default"
@@ -108,13 +111,14 @@ def first_pass( commands ):
   dictionary corresponding to the given knob with the
   appropirate value.
   ===================="""
-def second_pass( commands, num_frames ):
+def second_pass( commands ):
+    global num_frames
     knobs = [ {} for x in range(num_frames) ]
     for command in commands:
         if "vary" in command:
             frames = float(command[3] - command[2] + 1)
-            for x in range(command[2], command[3]):
-                knobs[x][command[1]] == command[5] / frames + command[4]
+            for x in range(command[2], command[3] + 1):
+                knobs[x][command[1]] = (command[5] / frames) * x + command[4]
     return knobs
 
 
@@ -134,13 +138,14 @@ def run(filename):
         print "Parsing failed."
         return
 
-    stack = [ tmp ]
-    screen = new_screen()
+    global basename
 
     first_pass(commands)
-    knobs = second_pass(commands, num_frames)
+    knobs = second_pass(commands)
 
     for x in range(num_frames):
+        screen = new_screen()
+        stack = [ tmp ]
         for command in commands:
             if command[0] == "pop":
                 stack.pop()
@@ -199,11 +204,10 @@ def run(filename):
                 draw_lines( m, screen, color )
 
             if command[0] == "move":
-                if num_frames > 1:
-                    if len(command) > 4:
-                        xval = command[1] * knobs[x][command[4]]
-                        yval = command[2] * knobs[x][command[4]]
-                        zval = command[3] * knobs[x][command[4]]
+                if command[4] != None:
+                    xval = command[1] * knobs[x][command[4]]
+                    yval = command[2] * knobs[x][command[4]]
+                    zval = command[3] * knobs[x][command[4]]
                 else:
                     xval = command[1]
                     yval = command[2]
@@ -214,11 +218,10 @@ def run(filename):
                 stack[-1] = t
 
             if command[0] == "scale":
-                if num_frames > 1:
-                    if len(command) > 4:
-                        xval = command[1] * knobs[x][command[4]]
-                        yval = command[2] * knobs[x][command[4]]
-                        zval = command[3] * knobs[x][command[4]]
+                if command[4] != None:
+                    xval = command[1] * knobs[x][command[4]]
+                    yval = command[2] * knobs[x][command[4]]
+                    zval = command[3] * knobs[x][command[4]]
                 else:
                     xval = command[1]
                     yval = command[2]
@@ -229,9 +232,8 @@ def run(filename):
                 stack[-1] = t
 
             if command[0] == "rotate":
-                if num_frames > 1:
-                    if len(command) > 3:
-                        angle = command[2] * knobs[x][command[3]] * (math.pi / 180)
+                if command[3] != None:
+                    angle = command[2] * knobs[x][command[3]] * (math.pi / 180)
                 else:
                     angle = command[2] * (math.pi / 180)
 
@@ -245,4 +247,4 @@ def run(filename):
                 matrix_mult( stack[-1], t )
                 stack[-1] = t
         if num_frames > 1:
-            save_extension(screen, "/" + basename + x)
+            save_extension( screen, "./animations/" + basename + "%03d.png"%x)
